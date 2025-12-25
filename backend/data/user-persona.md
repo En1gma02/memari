@@ -1,8 +1,8 @@
-# User Persona
+# Akshansh's Persona
 ---
 
 **Identity**  
-- Name: Not explicitly provided (referred to as James, Mark, etc.)  
+- Name: Akshansh Dwivedi
 - Location: San Francisco Bay Area (often mentions local weather, Bay Area activities)  
 - Occupation: Varied background – experience in law, accounting, painting, and academic study; currently engaged in professional work while pursuing personal projects.  
 

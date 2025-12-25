@@ -4,7 +4,7 @@ app.py - Streamlit Frontend for Ari Chatbot
 3-pane WhatsApp-style interface:
 - Left (20%): Chat history from CHAT.txt
 - Center (60%): Active chat with Ari
-- Right (20%): Debug panel (tools, context, reasoning)
+- Right (20%): Memory Panel (tools, context, reasoning)
 """
 
 import streamlit as st
@@ -282,7 +282,7 @@ with center_col:
             st.rerun()
 
 # ==============================================================================
-# RIGHT PANE: Ari's Brain (Debug Panel)
+# RIGHT PANE: Ari's Brain (Memory Panel)
 # ==============================================================================
 
 with right_col:

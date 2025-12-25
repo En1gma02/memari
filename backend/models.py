@@ -38,15 +38,15 @@ class WhatsAppResponse(BaseModel):
     )
     tool_calls_made: Optional[List[str]] = Field(
         default=None,
-        description="Names of tools that were called (for debug panel)"
+        description="Names of tools that were called (for Memory Panel)"
     )
     retrieved_context: Optional[str] = Field(
         default=None,
-        description="Context retrieved from memory (for debug panel)"
+        description="Context retrieved from memory (for Memory Panel)"
     )
     reasoning: Optional[str] = Field(
         default=None,
-        description="Model's reasoning steps (for debug panel)"
+        description="Model's reasoning steps (for Memory Panel)"
     )
 
 

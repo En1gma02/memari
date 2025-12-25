@@ -157,4 +157,46 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
+---
+
+## Error Handling
+
+### Tool Use Failed Recovery
+
+The backend gracefully handles Groq `tool_use_failed` errors when the model incorrectly attempts to call a non-existent tool (e.g., `json`).
+
+**Error Pattern**:
+```
+Error code: 400 - {'error': {
+  'message': "attempted to call tool 'json' which was not in request.tools",
+  'failed_generation': '{"name": "json", "arguments": {"messages": [...]}}'
+}}
+```
+
+**Recovery Strategy**:
+1. Detect `tool_use_failed` in error message
+2. Extract `failed_generation` JSON using regex
+3. Parse `arguments.messages` array
+4. Return as valid `WhatsAppResponse`
+5. Add to session history
+
+This ensures users still receive valid responses even when the LLM makes tool-calling mistakes.
+
+### Frontend Retry Logic
+
+The frontend API client (`lib/api.ts`) implements retry logic for resilience:
+- **Max retries**: 2 attempts
+- **Backoff**: Exponential (500ms, 1000ms)
+- **Errors handled**: Network failures, 500 errors, timeouts
+
+---
+
+## Running the Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
 Health check: `curl http://localhost:8000/health`

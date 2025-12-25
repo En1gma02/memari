@@ -58,7 +58,7 @@ Memari implements a **3-Layer Hybrid Memory System**:
 
 | Component | Technology |
 |-----------|------------|
-| **Frontend** | Streamlit (3-pane UI) |
+| **Frontend** | Next.js 16 + React 19 + shadcn/ui + Tailwind v4 |
 | **Backend** | FastAPI (Python) |
 | **Vector DB** | FAISS (faiss-cpu) |
 | **Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`) |
@@ -80,18 +80,22 @@ memari/
 │   ├── prompts.py         # System prompts & tool definitions
 │   ├── config.py          # Configuration & environment
 │   ├── models.py          # Pydantic models
+│   ├── requirements.txt
 │   ├── helper-scripts/
 │   │   ├── index_chat.py           # Index chat → FAISS
 │   │   ├── chat_to_user_persona.py # Generate persona
 │   │   └── index_to_json.py        # Export to JSON
-│   ├── user-persona.md    # Generated user persona
-│   ├── faiss_index.bin    # FAISS vector index
-│   ├── metadata.pkl       # Index metadata
-│   └── requirements.txt
-├── app.py                 # Streamlit frontend (3-pane)
+│   ├── data/
+│   │   ├── CHAT.txt
+│   │   ├── user-persona.md
+│   │   ├── faiss_index.bin
+│   │   └── metadata.pkl
+├── frontend               # Nextjs frontend
 ├── llm-docs/              # Cerebras & Groq API docs
 ├── memari-docs/           # Project documentation
-├── CHAT.txt               # Sample chat history
+├── streamlit/             # Prototype streamlit app
+│   │   ├── app.py
+│   │   └── requirements.txt
 └── README.md
 ```
 
@@ -122,27 +126,14 @@ CEREBRAS_API_KEY=your_cerebras_key
 GROQ_API_KEY=your_groq_key
 ```
 
-### 3. Index Chat History
-
-```bash
-cd backend/helper-scripts
-python index_chat.py
-```
-
-This will:
-1. Load `CHAT.txt` and split into sessions
-2. Rewrite each session with LLaMA 3.1 8B for optimal retrieval
-3. Generate embeddings with `all-MiniLM-L6-v2`
-4. Save FAISS index and metadata
-
-### 4. Run Backend
+### 3. Run Backend
 
 ```bash
 cd backend
 uvicorn main:app --reload
 ```
 
-### 5. Run Frontend
+### 4. Run Frontend
 
 ```bash
 cd frontend
@@ -229,16 +220,19 @@ Inspired by Rumik AI's IRA interface:
 - [x] Fusion retrieval with query expansion
 - [x] Tool calling integration (get_user_persona, get_long_term_memory)
 - [x] Safety guardrails with LlamaGuard 4
-- [x] Streamlit 3-pane frontend
-- [ ] Next.js production frontend
+- [x] Streamlit 3-pane frontend (prototype)
+- [x] **Next.js production frontend at `/chat`**
+- [x] **WhatsApp-style message bubbles**
+- [x] **Tool use error recovery**
 - [ ] Multi-user support
 - [ ] Streaming responses
+- [ ] Session persistence (database)
 
 ---
 
 ## 📄 License
 
-This project is for demonstration and learning purposes.
+This project is for demonstration and learning purposes and not to compete commercially with Rumik.ai. 
 
 ---
 

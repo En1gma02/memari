@@ -194,8 +194,8 @@ class ChatService:
             {"role": "system", "content": ARI_SYSTEM_PROMPT}
         ] + session_history[session_id]
         
-        # Step 4: Tool-calling loop (max 5 iterations for safety)
-        max_iterations = 5
+        # Step 4: Tool-calling loop (max 3 iterations for safety)
+        max_iterations = 3
         iteration = 0
         tool_calls_made = []
         retrieved_context = ""
@@ -252,7 +252,7 @@ class ChatService:
                         
                         print(f"  ✓ Completed in {execution_time:.2f}ms")
                         
-                        # Store context for debug panel
+                        # Store context for Memory Panel
                         if tool_name == "get_long_term_memory":
                             retrieved_context = tool_result
                         
@@ -285,7 +285,7 @@ class ChatService:
                                 line.strip() 
                                 for line in response_content.split("\n") 
                                 if line.strip()
-                            ][:4]  # Max 4 bubbles
+                            ][:10]  # Max 10 bubbles
                         else:
                             response_messages = [response_content]
                     
@@ -302,7 +302,48 @@ class ChatService:
                     ), safety_result
             
             except Exception as e:
+                error_str = str(e)
                 print(f"❌ Error in chat loop: {e}")
+                
+                # Handle tool_use_failed error - extract valid response from error
+                if "tool_use_failed" in error_str and "failed_generation" in error_str:
+                    print("⚠️  Extracting response from failed_generation...")
+                    try:
+                        # Extract the failed_generation JSON from error
+                        import re
+                        # Match the JSON object in failed_generation
+                        match = re.search(r"'failed_generation': '(\{.+\})'", error_str, re.DOTALL)
+                        if match:
+                            failed_json_str = match.group(1)
+                            # Unescape the string
+                            failed_json_str = failed_json_str.replace("\\n", "\n").replace("\\'", "'")
+                            response_json = json.loads(failed_json_str)
+                            
+                            # Handle both {"messages": [...]} and {"arguments": {"messages": [...]}}
+                            if "arguments" in response_json and "messages" in response_json["arguments"]:
+                                response_messages = response_json["arguments"]["messages"]
+                            elif "messages" in response_json:
+                                response_messages = response_json["messages"]
+                            else:
+                                response_messages = []
+                            
+                            if response_messages:
+                                print(f"✓ Recovered {len(response_messages)} messages from failed_generation")
+                                
+                                # Add to session history
+                                session_history[session_id].append({
+                                    "role": "assistant",
+                                    "content": json.dumps({"messages": response_messages})
+                                })
+                                
+                                return WhatsAppResponse(
+                                    messages=response_messages,
+                                    tool_calls_made=tool_calls_made if tool_calls_made else None,
+                                    retrieved_context=retrieved_context if retrieved_context else None
+                                ), safety_result
+                    except Exception as parse_error:
+                        print(f"❌ Failed to parse failed_generation: {parse_error}")
+                
                 raise e
         
         # Max iterations reached
