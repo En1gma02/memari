@@ -58,12 +58,13 @@ Memari implements a **3-Layer Hybrid Memory System**:
 
 | Component | Technology |
 |-----------|------------|
-| **Frontend** | Next.js 15, Tailwind CSS, Shadcn UI |
+| **Frontend** | Streamlit (3-pane UI) |
 | **Backend** | FastAPI (Python) |
 | **Vector DB** | FAISS (faiss-cpu) |
 | **Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`) |
+| **Re-ranking** | CrossEncoder (`ms-marco-MiniLM-L-2-v2`) |
 | **LLM - Fast** | Cerebras (`llama-3.1-8b`) |
-| **LLM - Smart** | Groq (`gpt-oss-120b` with reasoning) |
+| **LLM - Smart** | Groq (`gpt-oss-120b` with tool calling) |
 | **Safety** | Groq (`llama-guard-4-12b`) |
 
 ---
@@ -73,23 +74,24 @@ Memari implements a **3-Layer Hybrid Memory System**:
 ```
 memari/
 ├── backend/
+│   ├── main.py            # FastAPI endpoints (minimal)
+│   ├── services.py        # ChatService with tool calling
+│   ├── rag_engine.py      # Hybrid RAG (cosine + BM25 + reranking)
+│   ├── prompts.py         # System prompts & tool definitions
+│   ├── config.py          # Configuration & environment
+│   ├── models.py          # Pydantic models
 │   ├── helper-scripts/
-│   │   ├── index_chat.py           # Index chat history → FAISS
-│   │   ├── index_to_json.py        # Export index to JSON
-│   │   ├── chat_to_user_persona.py # Generate user persona
-│   │   └── chat_index.json         # Viewable indexed chunks
-│   ├── main.py                 # FastAPI application
-│   ├── user_persona.md         # Generated user persona
-│   ├── ari-system-prompt.md    # Ari's personality prompt
-│   ├── ari-life.md             # Ari's persona/backstory
-│   ├── faiss_index.bin         # FAISS vector index
-│   ├── metadata.pkl            # Index metadata
+│   │   ├── index_chat.py           # Index chat → FAISS
+│   │   ├── chat_to_user_persona.py # Generate persona
+│   │   └── index_to_json.py        # Export to JSON
+│   ├── user-persona.md    # Generated user persona
+│   ├── faiss_index.bin    # FAISS vector index
+│   ├── metadata.pkl       # Index metadata
 │   └── requirements.txt
-├── frontend/                   # Next.js web app
-├── llm-docs/                   # Cerebras & Groq API docs
-├── memari-docs/                # Project documentation
-├── CHAT.txt                    # Sample chat history (30K tokens)
-├── IDEA_CONTEXT.md             # Project vision & architecture
+├── app.py                 # Streamlit frontend (3-pane)
+├── llm-docs/              # Cerebras & Groq API docs
+├── memari-docs/           # Project documentation
+├── CHAT.txt               # Sample chat history
 └── README.md
 ```
 
@@ -150,23 +152,33 @@ bun dev
 
 ---
 
-## 🧪 Long-Term Memory Pipeline
+## 🧪 Memory Pipeline
 
 ### Indexing Flow
 
 ```
-CHAT.txt → Session Chunking → LLM Rewriting → Embeddings → FAISS Index
+CHAT.txt → Session Chunking → LLM Rewriting → Embeddings → FAISS + BM25
               ("Human 1: Hi")   (Cerebras)    (MiniLM)
 ```
 
-### Retrieval Flow
+### Retrieval Flow (Hybrid Search)
 
 ```
-User Query → Query Expansion → Hybrid Search → Reranking → Context Expansion
-                (4 queries)    (Dense + BM25)              (neighboring chunks)
-                    ↓
-            Response Generation ← Safety Check ← LLM Response
-                (Groq gpt-oss-120b)  (LlamaGuard)
+User Query
+    ↓
+┌─────────────────────────────────────┐
+│  75% Cosine (FAISS) + 25% BM25     │
+└─────────────────────────────────────┘
+    ↓
+CrossEncoder Re-ranking (ms-marco-MiniLM)
+    ↓
+Top 5 Results → LLM Context
+```
+
+### Chat Flow (Single API Call Pattern)
+
+```
+User → Safety (LlamaGuard) → LLM + Tools → Execute → Final JSON Response
 ```
 
 ---
@@ -211,14 +223,16 @@ Inspired by Rumik AI's IRA interface:
 - [x] LLM-powered memory rewriting
 - [x] FAISS vector storage
 - [x] User persona generation
-- [ ] FastAPI backend with RAG pipeline
-- [ ] Fusion retrieval with query expansion
-- [ ] Reranking algorithm
-- [ ] Context expansion (neighboring chunks)
-- [ ] User persona management
-- [ ] Tool calling integration
-- [ ] Next.js frontend
-- [ ] Safety guardrails with LlamaGuard
+- [x] FastAPI backend with RAG pipeline
+- [x] Hybrid search (75% cosine + 25% BM25)
+- [x] CrossEncoder re-ranking
+- [x] Fusion retrieval with query expansion
+- [x] Tool calling integration (get_user_persona, get_long_term_memory)
+- [x] Safety guardrails with LlamaGuard 4
+- [x] Streamlit 3-pane frontend
+- [ ] Next.js production frontend
+- [ ] Multi-user support
+- [ ] Streaming responses
 
 ---
 

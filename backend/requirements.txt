@@ -1,5 +1,20 @@
+# Core ML/AI
 faiss-cpu
 sentence-transformers
 numpy
+
+# LLM SDKs
+groq
 cerebras-cloud-sdk
+
+# FastAPI
+fastapi
+uvicorn[standard]
+pydantic
+
+# Utilities
 python-dotenv
+requests
+
+# Note: sentence-transformers includes CrossEncoder for re-ranking
+# Model used: cross-encoder/ms-marco-MiniLM-L-2-v2
