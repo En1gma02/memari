@@ -20,7 +20,7 @@ from typing import List, Dict
 # ==============================================================================
 
 API_BASE_URL = "http://localhost:8000"
-CHAT_HISTORY_PATH = Path("CHAT.txt")
+CHAT_HISTORY_PATH = Path("backend\data\CHAT.txt")
 
 # Page config
 st.set_page_config(

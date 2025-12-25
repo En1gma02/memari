@@ -22,8 +22,8 @@ import pickle
 # ==============================================================================
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "metadata.pkl")
-OUTPUT_JSON_PATH = os.path.join(SCRIPT_DIR, "chat_index.json")
+METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "data", "metadata.pkl")
+OUTPUT_JSON_PATH = os.path.join(SCRIPT_DIR, "..", "data", "chat_index.json")
 
 
 def estimate_tokens(text: str) -> int:

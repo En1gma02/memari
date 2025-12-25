@@ -46,16 +46,15 @@ EMBEDDING_DIMENSION = 384
 BASE_DIR = Path(__file__).parent
 
 # FAISS and metadata
-FAISS_INDEX_PATH = BASE_DIR / "faiss_index.bin"
-METADATA_PATH = BASE_DIR / "metadata.pkl"
+FAISS_INDEX_PATH = BASE_DIR / "data/faiss_index.bin"
+METADATA_PATH = BASE_DIR / "data/metadata.pkl"
 
 # Persona and prompts
-USER_PERSONA_PATH = BASE_DIR / "user-persona.md"
-ARI_SYSTEM_PROMPT_PATH = BASE_DIR / "ari-system-prompt.md"
-ARI_LIFE_PATH = BASE_DIR / "ari-life.md"
+USER_PERSONA_PATH = BASE_DIR / "data/user-persona.md"
+ARI_LIFE_PATH = BASE_DIR / "data/ari-life.md"
 
 # Chat history
-CHAT_HISTORY_PATH = BASE_DIR.parent / "CHAT.txt"
+CHAT_HISTORY_PATH = BASE_DIR / "data/CHAT.txt"
 
 # ==============================================================================
 # THRESHOLDS AND LIMITS

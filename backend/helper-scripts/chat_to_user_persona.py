@@ -26,8 +26,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(SCRIPT_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
-METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "metadata.pkl")
-PERSONA_OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "user_persona.md")
+METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "data", "metadata.pkl")
+PERSONA_OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "data", "user_persona.md")
 
 CEREBRAS_MODEL = "gpt-oss-120b"
 

@@ -11,8 +11,8 @@ Usage: Run from backend/helper-scripts/ directory
     python index_chat.py
 
 Output:
-    - backend/faiss_index.bin: FAISS index file
-    - backend/metadata.pkl: Pickle file mapping index IDs to text content
+    - backend/data/faiss_index.bin: FAISS index file
+    - backend/data/metadata.pkl: Pickle file mapping index IDs to text content
 """
 
 import os
@@ -36,9 +36,9 @@ ENV_PATH = os.path.join(SCRIPT_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
 # Paths (relative to script location: backend/helper-scripts/)
-CHAT_FILE_PATH = os.path.join(SCRIPT_DIR, "..", "..", "CHAT.txt")
-FAISS_INDEX_PATH = os.path.join(SCRIPT_DIR, "..", "faiss_index.bin")
-METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "metadata.pkl")
+CHAT_FILE_PATH = os.path.join(SCRIPT_DIR, "..", "data", "CHAT.txt")
+FAISS_INDEX_PATH = os.path.join(SCRIPT_DIR, "..", "data", "faiss_index.bin")
+METADATA_PATH = os.path.join(SCRIPT_DIR, "..", "data", "metadata.pkl")
 
 # Model configuration
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
