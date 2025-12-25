@@ -74,10 +74,12 @@ Memari implements a **3-Layer Hybrid Memory System**:
 memari/
 ├── backend/
 │   ├── helper-scripts/
-│   │   ├── index_chat.py       # Index chat history → FAISS
-│   │   ├── index_to_json.py    # Export index to JSON
-│   │   └── chat_index.json     # Viewable indexed chunks
+│   │   ├── index_chat.py           # Index chat history → FAISS
+│   │   ├── index_to_json.py        # Export index to JSON
+│   │   ├── chat_to_user_persona.py # Generate user persona
+│   │   └── chat_index.json         # Viewable indexed chunks
 │   ├── main.py                 # FastAPI application
+│   ├── user_persona.md         # Generated user persona
 │   ├── ari-system-prompt.md    # Ari's personality prompt
 │   ├── ari-life.md             # Ari's persona/backstory
 │   ├── faiss_index.bin         # FAISS vector index
@@ -208,6 +210,7 @@ Inspired by Rumik AI's IRA interface:
 - [x] Session-based chat indexing
 - [x] LLM-powered memory rewriting
 - [x] FAISS vector storage
+- [x] User persona generation
 - [ ] FastAPI backend with RAG pipeline
 - [ ] Fusion retrieval with query expansion
 - [ ] Reranking algorithm
