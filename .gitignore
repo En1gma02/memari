@@ -2,6 +2,8 @@
 /backend/__pycache__
 
 /benchmark/indian_law_dataset.json
+/benchmark/benchmark_faiss_index.bin
+/benchmark/benchmark_metadata.pkl
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 

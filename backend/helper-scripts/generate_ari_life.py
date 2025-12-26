@@ -9,7 +9,7 @@ if not os.environ.get("CEREBRAS_API_KEY"):
     print("⚠️  WARNING: CEREBRAS_API_KEY not found in environment variables.")
 
 client = Cerebras(
-    api_key= "csk-w83tkmky2938dex9n8jkfdv6m8v5x49yjjm9rh2dyrc33yvk"
+    api_key= os.environ.get("CEREBRAS_API_KEY")
 )
 
 # Output file path

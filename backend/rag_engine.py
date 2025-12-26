@@ -135,8 +135,8 @@ class RAGEngine:
         self.embedding_model = SentenceTransformer(EMBEDDING_MODEL)
         
         # Initialize re-ranker (CrossEncoder)
-        print("Loading re-ranker: cross-encoder/ms-marco-MiniLM-L-2-v2")
-        self.reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-2-v2")
+        print("Loading re-ranker: cross-encoder/ms-marco-MiniLM-L6-v2")
+        self.reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
         
         # Initialize Cerebras client
         self.cerebras_client = Cerebras(api_key=CEREBRAS_API_KEY)

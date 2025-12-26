@@ -100,7 +100,7 @@ final_score = 0.75 * cosine + 0.25 * bm25
 
 ### Re-Ranking
 
-Using CrossEncoder (`cross-encoder/ms-marco-MiniLM-L-2-v2`):
+Using CrossEncoder (`cross-encoder/ms-marco-MiniLM-L6-v2`):
 
 ```python
 # Get more candidates than needed

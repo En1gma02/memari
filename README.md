@@ -63,7 +63,7 @@ Memari implements a **4-Layer Hybrid Memory System**:
 | **Backend** | FastAPI (Python) |
 | **Vector DB** | FAISS (faiss-cpu) |
 | **Embeddings** | sentence-transformers (`all-MiniLM-L6-v2`) |
-| **Re-ranking** | CrossEncoder (`ms-marco-MiniLM-L-2-v2`) |
+| **Re-ranking** | CrossEncoder (`ms-marco-MiniLM-L6-v2`) |
 | **LLM - Fast** | Cerebras (`llama-3.1-8b`) |
 | **LLM - Smart** | Groq (`gpt-oss-120b` with tool calling) |
 | **Safety** | Groq (`llama-guard-4-12b`) |

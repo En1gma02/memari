@@ -67,7 +67,7 @@ CHAT_HISTORY_PATH = BASE_DIR / "data/CHAT.txt"
 # RAG retrieval
 CONFIDENCE_THRESHOLD = 0.7  # Trigger fusion retrieval if top score < 0.7
 TOP_K_RESULTS = 5  # Number of results to retrieve
-FUSION_QUERY_COUNT = 3  # Number of query variations for fusion retrieval
+FUSION_QUERY_COUNT = 5  # Number of query variations for fusion retrieval
 
 # Session management
 SESSION_TIMEOUT_MINUTES = 30  # Session ends after 30 mins of inactivity
