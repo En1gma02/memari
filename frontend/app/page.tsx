@@ -1,5 +1,114 @@
-import { ComponentExample } from "@/components/component-example";
+"use client";
 
-export default function Page() {
-return <ComponentExample />;
+import { motion } from "framer-motion";
+import { HeroSection } from "@/components/landing/hero-section";
+import { PipelineArchitecture } from "@/components/landing/pipeline-architecture";
+import { BenchmarkStats } from "@/components/landing/benchmark-stats";
+import { MemoryLayers } from "@/components/landing/memory-layers";
+import { ToolRegistry } from "@/components/landing/tool-registry";
+import { SocialLinks } from "@/components/landing/social-links";
+
+// Staggered container animation
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.2,
+        },
+    },
+};
+
+// Precise, technical entrance
+const cardVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 10 },
+    visible: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: {
+            duration: 0.4,
+            ease: [0.23, 1, 0.32, 1] as const, // Cubic bezier for "mechanical" feel
+        },
+    },
+};
+
+// Glass Card Shell - Now tighter and more uniform
+const glassPanel = "bg-[#050505]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl";
+
+export default function LandingPage() {
+    return (
+        <div className="h-screen w-screen overflow-hidden bg-black text-white relative font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+
+            {/* 1. Global Atmosphere */}
+            {/* Deep Radial Gradient Spotlight */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-900/40 via-black to-black pointer-events-none" />
+
+            {/* Engineering Grid Overlay */}
+            <div
+                className="absolute inset-0 opacity-[0.05] pointer-events-none z-0 mix-blend-screen"
+                style={{
+                    backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)',
+                    backgroundSize: '100px 100px'
+                }}
+            />
+
+            <motion.main
+                className="relative z-20 h-full w-full p-4 md:p-6 lg:p-8 flex items-center justify-center"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {/* BENTO GRID: Engineering HUD Layout (20% | 60% | 20%) */}
+                <div className="w-full max-w-[1600px] h-full max-h-[900px] grid grid-cols-12 md:grid-cols-[22%_56%_22%] gap-4 p-4">
+
+                    {/* LEFT COLUMN: Context & Memory */}
+                    <motion.div variants={cardVariants} className="col-span-12 md:col-auto flex flex-col gap-4 h-full">
+                        {/* Hero Section */}
+                        <div className="flex-none h-[35%] relative group">
+                            <div className="absolute inset-0 bg-emerald-500/5 blur-[100px] -z-10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                            <div className={`${glassPanel} h-full p-6 hover:border-white/20 transition-colors`}>
+                                <HeroSection />
+                            </div>
+                        </div>
+                        {/* Memory Layers & Socials */}
+                        <div className="flex-1 min-h-0 flex flex-col gap-4">
+                            <MemoryLayers />
+                            <div className="mt-auto">
+                                <SocialLinks />
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* CENTER COLUMN: Pipeline Architecture */}
+                    <motion.div
+                        variants={cardVariants}
+                        className="hidden md:block col-span-12 md:col-auto h-full relative z-10"
+                    >
+                        <PipelineArchitecture />
+                    </motion.div>
+
+                    {/* RIGHT COLUMN: Metrics & Stack */}
+                    <motion.div variants={cardVariants} className="col-span-12 md:col-auto flex flex-col gap-4 h-full">
+                        {/* Benchmark Stats */}
+                        <div className="flex-none h-[45%]">
+                            <BenchmarkStats />
+                        </div>
+                        {/* Tool Registry */}
+                        <div className="flex-1 min-h-0">
+                            <ToolRegistry />
+                        </div>
+                    </motion.div>
+
+                </div>
+            </motion.main>
+
+            {/* Mobile Override for Pipeline - Show it first on mobile */}
+            <div className="md:hidden absolute top-20 left-4 right-4 h-[300px] z-30 opacity-10 pointer-events-none">
+                {/* Visual placeholder only */}
+            </div>
+
+        </div>
+    );
 }
