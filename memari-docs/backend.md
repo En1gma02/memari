@@ -141,12 +141,22 @@ for chunk_id in results:
         expanded.extend([chunk_id - 1, chunk_id, chunk_id + 1])
 ```
 
-### Fusion Retrieval (Fallback)
+### Fusion Retrieval (Parallel)
 
 When confidence < 0.7 AND low adaptive K:
-1. Generate 5 query variations (Cerebras LLaMA 3.1)
-2. Search with all variations
+1. Generate 3 query variations (Cerebras LLaMA 3.1)
+2. Search with **all variations in parallel** (ThreadPoolExecutor)
 3. Merge and deduplicate results
+
+```python
+# Parallel fusion (V2 optimization)
+with ThreadPoolExecutor(max_workers=len(query_variations)) as executor:
+    futures = [executor.submit(search, q) for q in variations]
+    for future in as_completed(futures):
+        merge_results(future.result())
+```
+
+This reduces fusion time from ~1.5s (sequential) to ~300ms (parallel).
 
 ---
 
@@ -160,20 +170,45 @@ When confidence < 0.7 AND low adaptive K:
 
 ---
 
-## Safety Layer
+## Safety Layer (Smart Warning Injection)
 
-Every message passes through LlamaGuard 4:
+Every message passes through LlamaGuard 4, but **warnings are injected instead of blocking**:
 
 ```python
+# Check with LlamaGuard 4
 response = groq.chat.completions.create(
     model="meta-llama/llama-guard-4-12b",
     messages=[{"role": "user", "content": message}]
 )
 
-# Returns "safe" or "unsafe\nS2"
+# If flagged, inject warning into system prompt (not block)
+if not is_safe:
+    system_prompt += f"""
+    ⚠️ SAFETY ADVISORY: Flagged as {category} ({description}).
+    This may be a FALSE POSITIVE (common with Hinglish).
+    Use your judgment - respond naturally if harmless.
+    """
 ```
 
-Unsafe messages get a friendly Hinglish rejection.
+**Why?** LlamaGuard often flags casual Hinglish text as violations. The LLM (oss-120b) makes the final decision.
+
+---
+
+## Prompt Design (Zero-Shot)
+
+Prompts follow [Groq prompting best practices](https://console.groq.com/docs/prompting):
+
+| Prompt | Pattern | Rationale |
+|--------|---------|----------|
+| `ARI_SYSTEM_PROMPT` | Zero-shot | Prevents repetitive example copying |
+| `SESSION_REWRITING_PROMPT` | Few-shot (3 examples) | Locks output format |
+| `PERSONA_UPDATE_PROMPT` | Structured | Clear rules for updates |
+
+### Key Features:
+- **Identity Protection**: Never identifies as AI/OpenAI/GPT
+- **Proactive Tool Usage**: Aggressively uses memory tools
+- **Parallel Tool Calls**: Multiple tools in single turn encouraged
+- **Hinglish Voice**: Natural casual markers (arre, yaar, kya)
 
 ---
 

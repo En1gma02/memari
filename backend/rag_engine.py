@@ -43,7 +43,10 @@ from config import (
     ADAPTIVE_K_HIGH_THRESHOLD,
     ADAPTIVE_K_LOW_THRESHOLD,
     ADAPTIVE_K_HIGH,
-    ADAPTIVE_K_LOW
+    ADAPTIVE_K_LOW,
+    # Speed optimizations
+    DISABLE_FUSION_RETRIEVAL,
+    DISABLE_QUERY_EXPANSION
 )
 from prompts import SESSION_REWRITING_PROMPT, PERSONA_UPDATE_PROMPT
 from models import MemoryResult, MemoryChunk, PersonaUpdate
@@ -331,9 +334,12 @@ class RAGEngine:
         print(f"🔍 V2 Hybrid search in {index_name} for: '{query}'")
         
         # =====================================================================
-        # Step 1: Query expansion (V2)
+        # Step 1: Query expansion (V2) - SKIP IF DISABLED FOR SPEED
         # =====================================================================
-        expanded_query = self._expand_query(query)
+        if DISABLE_QUERY_EXPANSION:
+            expanded_query = query  # Skip slow LLM call
+        else:
+            expanded_query = self._expand_query(query)
         
         # =====================================================================
         # Step 2: Dense retrieval (FAISS) on both original and expanded query
@@ -427,7 +433,10 @@ class RAGEngine:
         print(f"  Adaptive K: {final_k} (confidence: {confidence_level}, top_score: {top_score:.3f})")
         
         # Check if we should use fusion retrieval (low confidence fallback)
-        use_fusion = force_fusion or (top_score < CONFIDENCE_THRESHOLD and confidence_level == "low")
+        # SKIP IF DISABLED FOR SPEED
+        use_fusion = not DISABLE_FUSION_RETRIEVAL and (
+            force_fusion or (top_score < CONFIDENCE_THRESHOLD and confidence_level == "low")
+        )
         
         if use_fusion:
             print(f"⚡ Low confidence ({top_score:.3f}) - triggering fusion retrieval")
@@ -512,17 +521,18 @@ Expanded:"""
     
     def _fusion_retrieval(self, query: str, top_k: int, index, metadata, index_name) -> MemoryResult:
         """
-        Fusion retrieval: Generate query variations and merge results.
+        Fusion retrieval: Generate query variations and search IN PARALLEL.
+        Uses ThreadPoolExecutor for concurrent FAISS searches.
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
         # Generate query variations using Cerebras
         query_variations = self._generate_query_variations(query)
-        print(f"  Generated {len(query_variations)} query variations")
+        print(f"  Generated {len(query_variations)} query variations (parallel search)")
         
-        # Search with all queries
-        all_results = {}
-        
-        for variation in query_variations:
-            # Get hybrid scores for this variation
+        # Define search function for a single query
+        def search_single_query(variation: str) -> Dict[int, Tuple[str, float]]:
+            results = {}
             query_embedding = self.embedding_model.encode([variation])
             num_candidates = min(top_k * 2, index.ntotal)
             distances, indices = index.search(query_embedding, num_candidates)
@@ -531,11 +541,31 @@ Expanded:"""
                 if idx != -1:
                     score = 1.0 / (1.0 + dist)
                     chunk_text = metadata["id_to_text"].get(idx, "")
-                    
-                    if idx not in all_results or score > all_results[idx][1]:
-                        all_results[idx] = (chunk_text, score)
+                    results[idx] = (chunk_text, score)
+            return results
+        
+        # Execute all searches in parallel
+        all_results = {}
+        start_time = time.time()
+        
+        with ThreadPoolExecutor(max_workers=len(query_variations)) as executor:
+            future_to_query = {
+                executor.submit(search_single_query, variation): variation 
+                for variation in query_variations
+            }
             
-            time.sleep(0.5)  # Small delay between variations
+            for future in as_completed(future_to_query):
+                try:
+                    results = future.result()
+                    # Merge results, keeping highest score
+                    for idx, (text, score) in results.items():
+                        if idx not in all_results or score > all_results[idx][1]:
+                            all_results[idx] = (text, score)
+                except Exception as e:
+                    print(f"  ⚠️ Parallel search failed: {e}")
+        
+        parallel_time = (time.time() - start_time) * 1000
+        print(f"  ✓ Parallel fusion completed in {parallel_time:.0f}ms")
         
         # Sort and return
         sorted_results = sorted(

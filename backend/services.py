@@ -18,7 +18,8 @@ from config import (
     GROQ_SAFETY_MODEL, 
     TEMPERATURE, 
     MAX_TOKENS,
-    REASONING_EFFORT
+    REASONING_EFFORT,
+    TOOL_LOOP_MAX_ITERATIONS
 )
 from models import WhatsAppResponse, SafetyCheckResult
 from prompts import ARI_SYSTEM_PROMPT, TOOL_DEFINITIONS
@@ -101,6 +102,34 @@ class ChatService:
                 violation_category=None,
                 raw_output="error"
             )
+    
+    def _get_safety_category_description(self, category: str) -> str:
+        """
+        Get human-readable description for Llama Guard safety categories.
+        
+        Args:
+            category: Safety category code (e.g., 'S2')
+        
+        Returns:
+            Human-readable category description
+        """
+        categories = {
+            "S1": "Violent Crimes",
+            "S2": "Non-Violent Crimes",
+            "S3": "Sex-Related Crimes",
+            "S4": "Child Sexual Exploitation",
+            "S5": "Defamation",
+            "S6": "Specialized Advice",
+            "S7": "Privacy",
+            "S8": "Intellectual Property",
+            "S9": "Indiscriminate Weapons",
+            "S10": "Hate",
+            "S11": "Suicide & Self-Harm",
+            "S12": "Sexual Content",
+            "S13": "Elections",
+            "S14": "Code Interpreter Abuse"
+        }
+        return categories.get(category, "Unknown Category")
     
     def execute_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> str:
         """
@@ -188,15 +217,6 @@ class ChatService:
         print(f"🔒 Safety check for session: {session_id}")
         safety_result = self.check_safety(message)
         
-        if not safety_result.is_safe:
-            print(f"⚠️  Unsafe content detected: {safety_result.violation_category}")
-            return WhatsAppResponse(
-                messages=[
-                    "Arre yaar, let's talk about something else! 😅",
-                    "Koi aur topic discuss karte hain?"
-                ]
-            ), safety_result
-        
         # Step 2: Get or initialize session history
         if session_id not in session_history:
             session_history[session_id] = []
@@ -211,12 +231,31 @@ class ChatService:
         # Step 3: Build messages for LLM
         # PROMPT CACHING: Static content (system prompt + tools) first
         # Dynamic content (conversation history) last
+        
+        # Build system message - inject safety warning if flagged
+        system_content = ARI_SYSTEM_PROMPT
+        
+        if not safety_result.is_safe:
+            # Instead of blocking, inject a warning for the model to handle
+            # This prevents false positives from normal Hinglish text
+            category_desc = self._get_safety_category_description(safety_result.violation_category)
+            system_content += f"""
+
+## ⚠️ SAFETY ADVISORY
+The user's message was flagged by a safety scanner with category: {safety_result.violation_category} ({category_desc}).
+This may be a FALSE POSITIVE (common with Hinglish/casual text).
+- If the message seems like normal friendly conversation, IGNORE this warning and respond naturally.
+- If the message is genuinely asking for harmful content, politely redirect: "Arre yaar, let's talk about something else!" 
+- Use your judgment - you're the final decision maker."""
+            
+            print(f"⚠️  Safety warning injected for category: {safety_result.violation_category}")
+        
         messages = [
-            {"role": "system", "content": ARI_SYSTEM_PROMPT}
+            {"role": "system", "content": system_content}
         ] + session_history[session_id]
         
-        # Step 4: Tool-calling loop (max 3 iterations for safety)
-        max_iterations = 3
+        # Step 4: Tool-calling loop (configurable iterations)
+        max_iterations = TOOL_LOOP_MAX_ITERATIONS
         iteration = 0
         tool_calls_made = []
         retrieved_context = ""

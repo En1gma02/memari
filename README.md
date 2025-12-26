@@ -202,8 +202,12 @@ User → Safety (LlamaGuard) → LLM + Tools → Execute → Final JSON Response
 - **Dual Metadata Storage**: Both original and rewritten text preserved
 - **Tool-Based Memory Access**: Memory is retrieved only when needed via function calling
 - **V2 RAG Pipeline**: Query expansion + FAISS-first BM25 + Adaptive K + Contextual expansion
+- **Parallel Fusion Retrieval**: Low-confidence queries trigger parallel multi-query search using ThreadPoolExecutor
 - **Self-Awareness**: Ari has access to her own life story via `get_self_info` tool (334 indexed chunks)
 - **Three-View Interface**: Seamlessly switch between Chat History, User Persona, and Ari's Life
+- **Smart Safety Layer**: LlamaGuard flags are passed as warnings to the LLM (handles Hinglish false positives)
+- **Zero-Shot Prompts**: Optimized prompts following Groq best practices (no example copying)
+- **Identity Protection**: Ari never identifies as AI/OpenAI/GPT
 
 ---
 
@@ -253,6 +257,11 @@ Inspired by Rumik AI's IRA interface:
 - [x] **V2 RAG: Query expansion, FAISS-first BM25, Adaptive K**
 - [x] **Contextual chunk expansion (±1 neighbors)**
 - [x] **RAG Benchmark Suite (V1/V2/V3 comparison)**
+- [x] **Zero-shot prompts (Groq best practices)**
+- [x] **Parallel fusion retrieval (ThreadPoolExecutor)**
+- [x] **Smart safety layer (warning injection vs blocking)**
+- [x] **Identity protection (never identifies as AI)**
+- [x] **Proactive tool usage (aggressive memory access)**
 - [ ] Multi-user support
 - [ ] Streaming responses
 - [ ] Session persistence (database)
