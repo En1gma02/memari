@@ -82,3 +82,4 @@ CEREBRAS_DELAY_SECONDS = 2  # Delay between Cerebras API calls (30 req/min limit
 MAX_HISTORY_TURNS = 15  # Maximum conversation history to include in context
 TEMPERATURE = 0.7  # Model temperature for chat responses
 MAX_TOKENS = 512  # Maximum tokens per response
+REASONING_EFFORT = "high"

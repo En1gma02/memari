@@ -17,7 +17,8 @@ from config import (
     GROQ_CHAT_MODEL, 
     GROQ_SAFETY_MODEL, 
     TEMPERATURE, 
-    MAX_TOKENS
+    MAX_TOKENS,
+    REASONING_EFFORT
 )
 from models import WhatsAppResponse, SafetyCheckResult
 from prompts import ARI_SYSTEM_PROMPT, TOOL_DEFINITIONS
@@ -231,7 +232,8 @@ class ChatService:
                     messages=messages,
                     tools=TOOL_DEFINITIONS,
                     temperature=TEMPERATURE,
-                    max_tokens=MAX_TOKENS
+                    max_tokens=MAX_TOKENS,
+                    reasoning_effort=REASONING_EFFORT
                 )
                 
                 assistant_message = response.choices[0].message
