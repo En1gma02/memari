@@ -13,32 +13,42 @@ The chat interface uses a fixed three-column grid layout with independent scroll
 
 All panels have uniform 72px headers and footers for visual consistency.
 
-## Left Panel: History/Persona Viewer
+## Left Panel: History/Persona/Life Viewer
 
 ### Features
-- **Toggle Selector**: Squarish pill-shaped toggle with hover tooltips
-  - **History DB**: "This is the chat database currently embedded in Ari's long term memory for demonstration purposes."
-  - **User Persona**: "This is the outlined personality of the user which Ari has identified and often uses when needing more context about user."
+- **Custom Dropdown Selector**: Sleek select component with three views
+  - Clean title-only trigger (icon + text)
+  - Dropdown items include secondary descriptive text
+  - Description text shown below dropdown updates based on selection
+  
+### View Options
 
-### History View
+#### 1. Chat History View
+- **Description**: "Chat database used for long term memory. Updated after every chat session."
 - Displays `backend/data/CHAT.txt` as chat bubbles
 - Parses "Human X:" and "Ari:" message format
 - Auto-sized bubbles with proper alignment
 - Shows up to 150 messages (with count for overflow)
+- **Footer Stats**: 93 Sessions, 750 Messages, 29,645 Tokens, 13,255 Embedded
 
-### Persona View
+#### 2. User Persona View
+- **Description**: "User's stored preferences, personality traits, and facts. Updated after every session. Fully Passed when get_user_persona tool is called."
 - Renders `backend/data/user-persona.md` as formatted markdown
 - Supports headers (# ##), lists, bold text, horizontal rules
 - Clean card design with border and padding
+- **Footer Stats**: 2,450 Tokens, 15,800 Characters
 
-### Metadata Footer
-Displays database statistics in 2x2 grid (left-aligned):
-- **93** Sessions
-- **750** Messages  
-- **29,645** Tokens
-- **13,255** Embedded (in primary color)
+#### 3. Ari's Life View ✨ NEW
+- **Description**: "Information about Ari's life. Undergoes RAG pipeline when 'get_self_info' tool is called."
+- Renders `backend/data/ari-life.md` using react-markdown
+- Full markdown support: headings, paragraphs, lists, horizontal rules, blockquotes, bold
+- Custom styled with proper typography hierarchy
+- **Footer Stats**: 334 Chunks, 138,908 Tokens
 
-Font sizes: `text-xs` for numbers, `text-[8px]` for labels
+### Dynamic Footer
+- Displays view-specific statistics (left-aligned)
+- Font sizes: `text-xs` for numbers, `text-[8px]` for labels
+- Updates automatically based on selected view
 
 ## Center Panel: Chat Interface
 
@@ -88,12 +98,13 @@ Font sizes: `text-xs` for numbers, `text-[8px]` for labels
 ### Available Tools Section
 - Shows all tools available to the LLM
 - Each tool displayed with:
-  - Icon in colored box (User, Search)
+  - Icon in colored box (User, Search, BookOpen)
   - Tool name in mono font
   - Description text (11px)
 - Tools:
   - `get_user_persona` - "Retrieves user's stored preferences, personality traits, and facts"
   - `get_long_term_memory` - "Semantic search through indexed conversation history using hybrid RAG"
+  - `get_self_info` ✨ NEW - "Retrieves information about Ari's life story, background, and personality"
 
 ### Tools Used Section
 - Green-themed display for active tool calls
@@ -173,20 +184,22 @@ Parses two formats:
 components/chat/
 ├── chat-interface.tsx       # Main chat UI
 ├── message-bubble.tsx       # Message bubbles + typing + date
-├── chat-history.tsx         # Left panel with toggle
+├── chat-history.tsx         # Left panel with dropdown selector
 ├── debug-panel.tsx          # Right panel (Memory Panel)
 └── index.ts                 # Barrel exports
 
 lib/
 ├── api.ts                   # Backend API client
-└── data.ts                  # Data fetching utilities
+└── data.ts                  # Data fetching (history, persona, ari-life)
 
 app/
 ├── chat/
 │   └── page.tsx             # Main chat page
 └── api/
-    └── data/
-        └── route.ts         # Data file API route
+    ├── data/
+    │   └── route.ts         # Data file API route
+    └── ari-life/
+        └── route.ts         # Ari's life content API route ✨ NEW
 ```
 
 ## Design Principles

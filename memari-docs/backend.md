@@ -12,7 +12,15 @@ backend/
 ├── prompts.py        # System prompts and tool definitions
 ├── config.py         # Configuration and environment
 ├── models.py         # Pydantic models
+├── data/
+│   ├── ari-life.md       # Ari's life story (source)
+│   ├── faiss_index_ari.bin   # Ari's life vector index
+│   ├── metadata_ari.pkl      # Ari's life metadata
+│   └── ari_index.json        # Debug export
 └── helper-scripts/   # Indexing utilities
+    ├── index_chat.py
+    ├── index_ari_life.py     # NEW: Index Ari's life story
+    └── verify_ari_index.py   # Verification script
 ```
 
 ---
@@ -119,7 +127,8 @@ When confidence < 0.7:
 | Tool | Description | When Used |
 |------|-------------|-----------|
 | `get_user_persona` | Read user-persona.md | User asks about themselves |
-| `get_long_term_memory` | Search FAISS | Reference to past events |
+| `get_long_term_memory` | Search FAISS (user chat index) | Reference to past events |
+| `get_self_info` | Search FAISS (Ari's life index) | Questions about Ari's background, experiences, personality |
 
 ---
 

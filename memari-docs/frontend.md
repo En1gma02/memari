@@ -95,6 +95,7 @@ frontend/
     "next": "16.1.1",                     // Next.js framework
     "react": "19.2.3",                    // React library
     "react-dom": "19.2.3",                // React DOM
+    "react-markdown": "^10.1.0",          // Markdown rendering for Ari's Life view
     "shadcn": "^3.6.2",                   // shadcn/ui CLI and components
     "tailwind-merge": "^3.4.0",           // Tailwind class merging
     "tw-animate-css": "^1.4.0"            // CSS animations for Tailwind
