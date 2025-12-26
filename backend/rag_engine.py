@@ -35,7 +35,15 @@ from config import (
     FUSION_QUERY_COUNT,
     CEREBRAS_DELAY_SECONDS,
     ARI_FAISS_INDEX_PATH,
-    ARI_METADATA_PATH
+    ARI_METADATA_PATH,
+    # V2 RAG Optimizations
+    FAISS_CANDIDATES,
+    CONTEXT_EXPANSION_WINDOW,
+    CONTEXT_EXPANSION_MIN_SCORE,
+    ADAPTIVE_K_HIGH_THRESHOLD,
+    ADAPTIVE_K_LOW_THRESHOLD,
+    ADAPTIVE_K_HIGH,
+    ADAPTIVE_K_LOW
 )
 from prompts import SESSION_REWRITING_PROMPT, PERSONA_UPDATE_PROMPT
 from models import MemoryResult, MemoryChunk, PersonaUpdate
@@ -73,9 +81,14 @@ class BM25:
         for doc in self.tokenized_docs:
             for term in set(doc):
                 self.doc_freqs[term] = self.doc_freqs.get(term, 0) + 1
+        
+        # Pre-compute term frequencies for each document (V2 optimization)
+        self.term_freqs = [Counter(doc) for doc in self.tokenized_docs]
     
     def _tokenize(self, text: str) -> List[str]:
         """Simple tokenization: lowercase and split on non-alphanumeric."""
+        if not isinstance(text, str):
+            return []
         return re.findall(r'\w+', text.lower())
     
     def _idf(self, term: str) -> float:
@@ -89,8 +102,8 @@ class BM25:
         doc_terms = self.tokenized_docs[doc_idx]
         doc_len = len(doc_terms)
         
-        # Count term frequencies in document
-        term_freqs = Counter(doc_terms)
+        # Use pre-computed term frequencies (V2 optimization)
+        term_freqs = self.term_freqs[doc_idx]
         
         score = 0.0
         for term in query_terms:
@@ -117,6 +130,33 @@ class BM25:
         scores = [(i, self.score(query, i)) for i in range(self.doc_count)]
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores[:top_k]
+    
+    def score_candidates(self, query: str, candidate_ids: List[int]) -> Dict[int, float]:
+        """
+        V2: Score only the given candidate IDs (not all documents).
+        Much faster for large document collections.
+        """
+        query_terms = self._tokenize(query)
+        scores = {}
+        for doc_idx in candidate_ids:
+            if 0 <= doc_idx < self.doc_count:
+                scores[doc_idx] = self._score_with_terms(query_terms, doc_idx)
+        return scores
+    
+    def _score_with_terms(self, query_terms: List[str], doc_idx: int) -> float:
+        """Score a document with pre-tokenized query terms."""
+        doc_len = len(self.tokenized_docs[doc_idx])
+        term_freqs = self.term_freqs[doc_idx]
+        
+        score = 0.0
+        for term in query_terms:
+            if term in term_freqs:
+                tf = term_freqs[term]
+                idf = self._idf(term)
+                numerator = tf * (self.k1 + 1)
+                denominator = tf + self.k1 * (1 - self.b + self.b * doc_len / self.avg_doc_len)
+                score += idf * numerator / denominator
+        return score
 
 
 # ==============================================================================
@@ -277,104 +317,198 @@ class RAGEngine:
         force_fusion: bool,
         index_name: str
     ) -> MemoryResult:
-        """Type-agnostic hybrid search implementation."""
+        """
+        V2 Optimized hybrid search with:
+        - Query expansion (LLM adds synonyms)
+        - FAISS-first BM25 (score only candidates, not all docs)
+        - Adaptive Top-K based on confidence
+        - Contextual chunk expansion for LLM
+        """
         if index.ntotal == 0:
             print(f"⚠️  {index_name} FAISS index is empty")
             return MemoryResult(chunks=[], scores=[], fusion_used=False)
         
-        print(f"🔍 Hybrid search in {index_name} for: '{query}'")
+        print(f"🔍 V2 Hybrid search in {index_name} for: '{query}'")
         
-        # Step 1: Dense retrieval (FAISS - cosine similarity)
-        query_embedding = self.embedding_model.encode([query])
-        # Get more candidates for re-ranking
-        num_candidates = min(top_k * 3, index.ntotal)
-        distances, indices = index.search(query_embedding, num_candidates)
+        # =====================================================================
+        # Step 1: Query expansion (V2)
+        # =====================================================================
+        expanded_query = self._expand_query(query)
         
-        # Convert L2 distances to similarity scores (0-1 range)
-        dense_scores = {}
-        for idx, dist in zip(indices[0], distances[0]):
-            if idx != -1:
-                # L2 to cosine-like similarity
-                score = 1.0 / (1.0 + dist)
-                dense_scores[idx] = score
+        # =====================================================================
+        # Step 2: Dense retrieval (FAISS) on both original and expanded query
+        # =====================================================================
+        all_candidates: Dict[int, float] = {}
         
-        # Step 2: BM25 retrieval (sparse)
-        bm25_scores = {}
-        if bm25 is not None:
-            bm25_results = bm25.search(query, top_k=num_candidates)
-            # Normalize BM25 scores to 0-1 range
-            max_bm25 = max(score for _, score in bm25_results) if bm25_results else 1.0
-            for idx, score in bm25_results:
-                if max_bm25 > 0:
-                    bm25_scores[idx] = score / max_bm25
-                else:
-                    bm25_scores[idx] = 0.0
+        for q in [query, expanded_query]:
+            if not isinstance(q, str) or not q.strip():
+                continue
+            query_embedding = self.embedding_model.encode([q])
+            num_candidates = min(FAISS_CANDIDATES, index.ntotal)
+            distances, indices = index.search(query_embedding, num_candidates)
+            
+            for idx, dist in zip(indices[0], distances[0]):
+                if idx != -1:
+                    score = 1.0 / (1.0 + dist)
+                    if idx not in all_candidates or score > all_candidates[idx]:
+                        all_candidates[idx] = score
         
-        # Step 3: Hybrid scoring (75% cosine + 25% BM25)
-        hybrid_scores = {}
-        all_indices = set(dense_scores.keys()) | set(bm25_scores.keys())
+        # =====================================================================
+        # Step 3: BM25 on FAISS candidates only (V2 - MAJOR SPEED IMPROVEMENT)
+        # =====================================================================
+        if bm25 is not None and all_candidates:
+            candidate_ids = list(all_candidates.keys())
+            bm25_scores = bm25.score_candidates(query, candidate_ids)
+            
+            # Normalize BM25 scores
+            max_bm25 = max(bm25_scores.values()) if bm25_scores else 1.0
+            
+            # Hybrid combine (75% cosine + 25% BM25)
+            for idx in all_candidates:
+                cosine_score = all_candidates[idx]
+                bm25_score = bm25_scores.get(idx, 0) / max_bm25 if max_bm25 > 0 else 0
+                all_candidates[idx] = 0.75 * cosine_score + 0.25 * bm25_score
         
-        for idx in all_indices:
-            cosine_score = dense_scores.get(idx, 0.0)
-            bm25_score = bm25_scores.get(idx, 0.0)
-            hybrid_scores[idx] = 0.75 * cosine_score + 0.25 * bm25_score
-        
-        # Get top candidates for re-ranking
+        # Sort and get top candidates for re-ranking
         sorted_candidates = sorted(
-            hybrid_scores.items(), 
-            key=lambda x: x[1], 
+            all_candidates.items(),
+            key=lambda x: x[1],
             reverse=True
         )[:top_k * 2]
         
         print(f"  Found {len(sorted_candidates)} candidates for re-ranking")
         
-        # Step 4: Re-rank with CrossEncoder
+        # =====================================================================
+        # Step 4: CrossEncoder re-ranking
+        # =====================================================================
         if sorted_candidates:
             candidate_texts = [
                 metadata["id_to_text"].get(idx, "") 
                 for idx, _ in sorted_candidates
             ]
             
-            # Create pairs for re-ranking
             pairs = [[query, text] for text in candidate_texts]
-            
-            # Get re-ranker scores
             rerank_scores = self.reranker.predict(pairs)
             
-            # Combine with original ranking
+            # Normalize CrossEncoder scores to 0-1 using sigmoid
+            # CrossEncoder returns logits which can be negative
+            def sigmoid(x):
+                return 1 / (1 + np.exp(-x))
+            
             reranked_results = []
             for i, (idx, hybrid_score) in enumerate(sorted_candidates):
-                rerank_score = float(rerank_scores[i])
-                # Final score: 60% reranker + 40% hybrid
+                rerank_score = sigmoid(float(rerank_scores[i]))  # Normalize to 0-1
                 final_score = 0.6 * rerank_score + 0.4 * hybrid_score
                 reranked_results.append((idx, final_score))
             
-            # Sort by final score
             reranked_results.sort(key=lambda x: x[1], reverse=True)
-            top_results = reranked_results[:top_k]
         else:
-            top_results = []
+            reranked_results = []
         
-        # Check if we should use fusion retrieval
-        top_score = top_results[0][1] if top_results else 0.0
-        use_fusion = force_fusion or (top_score < CONFIDENCE_THRESHOLD and len(top_results) > 0)
+        # =====================================================================
+        # Step 5: Adaptive Top-K (V2)
+        # =====================================================================
+        top_score = reranked_results[0][1] if reranked_results else 0.0
+        
+        if top_score >= ADAPTIVE_K_HIGH_THRESHOLD:
+            adaptive_k = ADAPTIVE_K_HIGH
+            confidence_level = "high"
+        elif top_score <= ADAPTIVE_K_LOW_THRESHOLD:
+            adaptive_k = ADAPTIVE_K_LOW
+            confidence_level = "low"
+        else:
+            adaptive_k = top_k
+            confidence_level = "medium"
+        
+        # Use the adaptive K
+        final_k = min(top_k, adaptive_k) if confidence_level == "high" else max(top_k, adaptive_k)
+        top_results = reranked_results[:final_k]
+        
+        print(f"  Adaptive K: {final_k} (confidence: {confidence_level}, top_score: {top_score:.3f})")
+        
+        # Check if we should use fusion retrieval (low confidence fallback)
+        use_fusion = force_fusion or (top_score < CONFIDENCE_THRESHOLD and confidence_level == "low")
         
         if use_fusion:
             print(f"⚡ Low confidence ({top_score:.3f}) - triggering fusion retrieval")
             return self._fusion_retrieval(query, top_k, index, metadata, index_name)
         
-        # Prepare results
+        # =====================================================================
+        # Step 6: Contextual Chunk Expansion (V2)
+        # =====================================================================
+        chunk_ids = [idx for idx, _ in top_results]
+        score_map = {idx: score for idx, score in top_results}
+        expanded_chunk_ids = self._expand_context(chunk_ids, index.ntotal, score_map)
+        
+        # Prepare results with expanded context
         chunks = []
         scores = []
         
-        for idx, score in top_results:
+        for idx in expanded_chunk_ids:
             chunk_text = metadata["id_to_text"].get(idx, "")
-            chunks.append(chunk_text)
-            scores.append(score)
+            if chunk_text:
+                chunks.append(chunk_text)
+                scores.append(score_map.get(idx, 0.0))
         
-        print(f"  Returning {len(chunks)} results (top score: {scores[0]:.3f})" if scores else "  No results")
+        print(f"  Returning {len(chunks)} results (with context expansion)")
         
         return MemoryResult(chunks=chunks, scores=scores, fusion_used=False)
+    
+    def _expand_query(self, query: str) -> str:
+        """
+        V2: Expand query with synonyms and related terms.
+        Uses LLM to add relevant keywords for better retrieval.
+        """
+        prompt = f"""Expand this question with synonyms and related terms.
+Keep it as ONE expanded query. Be concise.
+
+Original: {query}
+
+Expanded:"""
+        
+        try:
+            response = self.cerebras_client.chat.completions.create(
+                model=CEREBRAS_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=256,
+                temperature=0.2
+            )
+            if response and response.choices and response.choices[0].message.content:
+                expanded = response.choices[0].message.content.strip()
+                if expanded and isinstance(expanded, str):
+                    print(f"  Query expanded: '{query[:50]}...' → '{expanded[:50]}...'")
+                    return expanded
+        except Exception as e:
+            print(f"  ⚠️ Query expansion failed: {e}")
+        return query
+    
+    def _expand_context(self, chunk_ids: List[int], total_chunks: int, score_map: Dict[int, float] = None, metadata = None) -> List[int]:
+        """
+        V2: Include neighboring chunks for more context.
+        Only includes neighbors that score above CONTEXT_EXPANSION_MIN_SCORE.
+        """
+        expanded = []
+        seen = set()
+        
+        for chunk_id in chunk_ids:
+            # Always add the original chunk
+            if chunk_id not in seen:
+                expanded.append(chunk_id)
+                seen.add(chunk_id)
+            
+            # Add surrounding chunks within window (only if they have good scores)
+            for offset in range(-CONTEXT_EXPANSION_WINDOW, CONTEXT_EXPANSION_WINDOW + 1):
+                if offset == 0:  # Skip the original (already added)
+                    continue
+                neighbor_id = chunk_id + offset
+                if 0 <= neighbor_id < total_chunks and neighbor_id not in seen:
+                    # Check if neighbor has a score above threshold
+                    neighbor_score = score_map.get(neighbor_id, 0.0) if score_map else 0.0
+                    if neighbor_score >= CONTEXT_EXPANSION_MIN_SCORE:
+                        expanded.append(neighbor_id)
+                        seen.add(neighbor_id)
+        
+        return expanded
     
     def _fusion_retrieval(self, query: str, top_k: int, index, metadata, index_name) -> MemoryResult:
         """
@@ -417,7 +551,7 @@ class RAGEngine:
     
     def _generate_query_variations(self, original_query: str) -> List[str]:
         """Generate query variations using Cerebras LLM."""
-        prompt = f"""Generate {FUSION_QUERY_COUNT - 1} alternative ways to phrase this search query. Each variation should capture the same intent but use different words.
+        prompt = f"""Generate {FUSION_QUERY_COUNT - 1} alternative ways to phrase this search query. Each variation should capture the same intent but use different words. Optimized for RAG retrieval.
 
 Original query: {original_query}
 

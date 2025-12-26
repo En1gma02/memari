@@ -69,6 +69,17 @@ CONFIDENCE_THRESHOLD = 0.7  # Trigger fusion retrieval if top score < 0.7
 TOP_K_RESULTS = 5  # Number of results to retrieve
 FUSION_QUERY_COUNT = 5  # Number of query variations for fusion retrieval
 
+# V2 RAG Optimizations
+FAISS_CANDIDATES = 50  # Get more FAISS candidates before BM25 (not all docs)
+CONTEXT_EXPANSION_WINDOW = 1  # Include ±1 neighboring chunks for context
+CONTEXT_EXPANSION_MIN_SCORE = 0.25  # Only include neighbors with score >= 25%
+
+# Adaptive Top-K thresholds
+ADAPTIVE_K_HIGH_THRESHOLD = 0.7  # High confidence → use fewer chunks
+ADAPTIVE_K_LOW_THRESHOLD = 0.4   # Low confidence → use more chunks
+ADAPTIVE_K_HIGH = 3  # Top-K when confident
+ADAPTIVE_K_LOW = 7   # Top-K when uncertain
+
 # Session management
 SESSION_TIMEOUT_MINUTES = 30  # Session ends after 30 mins of inactivity
 
@@ -82,4 +93,4 @@ CEREBRAS_DELAY_SECONDS = 2  # Delay between Cerebras API calls (30 req/min limit
 MAX_HISTORY_TURNS = 15  # Maximum conversation history to include in context
 TEMPERATURE = 0.7  # Model temperature for chat responses
 MAX_TOKENS = 512  # Maximum tokens per response
-REASONING_EFFORT = "high"
+REASONING_EFFORT = "medium"

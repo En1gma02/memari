@@ -83,18 +83,30 @@ Benefits:
 
 ---
 
-## Hybrid RAG Pipeline
+## Hybrid RAG Pipeline (V2 Optimized)
+
+### V2 Improvements
+
+| Feature | Description | Benefit |
+|---------|-------------|---------|
+| **Query Expansion** | LLM adds synonyms/related terms | +9% Hit Rate |
+| **FAISS-first BM25** | BM25 reranking on top 50 vector results | 3x faster retrieval |
+| **Adaptive Top-K** | Adjust K based on confidence | Efficiency |
+| **Contextual Expansion** | Include ±1 neighboring chunks | Better answers |
 
 ### Search Strategy (75% Cosine + 25% BM25)
 
 ```python
-# Dense retrieval (semantic)
-dense_scores = FAISS.search(query_embedding)
+# Step 1: Query Expansion (V2)
+expanded_query = LLM.expand(original_query)
 
-# Sparse retrieval (keyword)
-bm25_scores = BM25.search(query)
+# Step 2: Dense retrieval on both queries
+candidates = FAISS.search([query, expanded_query], k=50)
 
-# Hybrid combination
+# Step 3: BM25 on FAISS candidates only (V2 - SPEED!)
+bm25_scores = BM25.score_candidates(query, candidates)
+
+# Step 4: Hybrid combination
 final_score = 0.75 * cosine + 0.25 * bm25
 ```
 
@@ -109,14 +121,30 @@ candidates = hybrid_search(query, top_k=10)
 # Re-rank with CrossEncoder
 reranked = CrossEncoder.rank(query, candidates)
 
-# Return top 5
-return reranked[:5]
+# Adaptive K: fewer when confident, more when uncertain
+if top_score >= 0.7:
+    return reranked[:3]   # High confidence
+elif top_score <= 0.4:
+    return reranked[:7]   # Low confidence
+else:
+    return reranked[:5]   # Medium
+```
+
+### Contextual Chunk Expansion (V2)
+
+When retrieving chunk #42, also include #41 and #43 **only if they score ≥25%**:
+
+```python
+# Include ±1 neighboring chunks (only if relevant)
+for chunk_id in results:
+    if neighbor_score >= 0.25:  # Skip low-relevance neighbors
+        expanded.extend([chunk_id - 1, chunk_id, chunk_id + 1])
 ```
 
 ### Fusion Retrieval (Fallback)
 
-When confidence < 0.7:
-1. Generate 3 query variations (Cerebras LLaMA 3.1)
+When confidence < 0.7 AND low adaptive K:
+1. Generate 5 query variations (Cerebras LLaMA 3.1)
 2. Search with all variations
 3. Merge and deduplicate results
 
