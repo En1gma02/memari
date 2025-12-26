@@ -138,6 +138,26 @@ class ChatService:
             
             return formatted
         
+        elif tool_name == "get_self_info":
+            query = tool_args.get("query", "")
+            if not query:
+                return "Error: No query provided"
+            
+            result = rag_engine.get_ari_life_memory(query)
+            
+            if not result.chunks:
+                return "I don't recall specific details about that right now."
+            
+            # Format the memory results
+            formatted = "My Life Memories:\n\n"
+            for i, (chunk, score) in enumerate(zip(result.chunks, result.scores), 1):
+                formatted += f"{i}. (Score: {score:.3f})\n{chunk}\n\n"
+            
+            if result.fusion_used:
+                formatted += "(Used fusion retrieval for better results)"
+            
+            return formatted
+        
         else:
             return f"Error: Unknown tool '{tool_name}'"
     
@@ -253,7 +273,8 @@ class ChatService:
                         print(f"  ✓ Completed in {execution_time:.2f}ms")
                         
                         # Store context for Memory Panel
-                        if tool_name == "get_long_term_memory":
+                        # Store context for Memory Panel
+                        if tool_name in ["get_long_term_memory", "get_self_info"]:
                             retrieved_context = tool_result
                         
                         # Add tool result to messages

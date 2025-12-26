@@ -49,6 +49,10 @@ BASE_DIR = Path(__file__).parent
 FAISS_INDEX_PATH = BASE_DIR / "data/faiss_index.bin"
 METADATA_PATH = BASE_DIR / "data/metadata.pkl"
 
+# Ari Life index
+ARI_FAISS_INDEX_PATH = BASE_DIR / "data/faiss_index_ari.bin"
+ARI_METADATA_PATH = BASE_DIR / "data/metadata_ari.pkl"
+
 # Persona and prompts
 USER_PERSONA_PATH = BASE_DIR / "data/user-persona.md"
 ARI_LIFE_PATH = BASE_DIR / "data/ari-life.md"

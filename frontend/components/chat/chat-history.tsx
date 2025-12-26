@@ -3,22 +3,61 @@
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { fetchChatHistory, fetchUserPersona, parseChatHistory, ChatMessage } from "@/lib/data";
+import { fetchChatHistory, fetchUserPersona, fetchAriLifeContent, parseChatHistory, ChatMessage } from "@/lib/data";
+import ReactMarkdown from 'react-markdown';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { User, History, BookOpen } from "lucide-react";
 
-type ViewMode = "history" | "persona";
+type ViewMode = "history" | "persona" | "ari-life";
+
+// View descriptions
+const VIEW_DESCRIPTIONS: Record<ViewMode, string> = {
+    history: "Chat database used for long term memory. Updated after every chat session.",
+    persona: "User's stored preferences, personality traits, and facts. Updated after every session. Fully Passed when get_user_persona tool is called.",
+    "ari-life": "Information about Ari's life. Undergoes RAG pipeline when 'get_self_info' tool is called."
+};
 
 // Database metadata
 const DB_METADATA = {
-    totalChats: 750,
-    totalSessions: 93,
-    totalTokens: 29645,
-    embeddedTokens: 13255,
+    history: {
+        totalChats: 750,
+        totalSessions: 93,
+        totalTokens: 29645,
+        embeddedTokens: 13255,
+        label1: "Sessions",
+        label2: "Messages",
+        label3: "Tokens",
+        label4: "Embedded",
+        val1: "93",
+        val2: "750",
+        val3: "29,645",
+        val4: "13,255"
+    },
+    persona: {
+        val1: "2,450",
+        val2: "15,800",
+        label1: "Tokens",
+        label2: "Characters",
+    },
+    "ari-life": {
+        val1: "334",
+        val2: "138,908",
+        label1: "Chunks",
+        label2: "Tokens",
+    }
 };
 
 export function ChatHistory() {
     const [viewMode, setViewMode] = useState<ViewMode>("history");
     const [historyMessages, setHistoryMessages] = useState<ChatMessage[]>([]);
     const [personaContent, setPersonaContent] = useState("");
+    const [ariLifeContent, setAriLifeContent] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -28,49 +67,123 @@ export function ChatHistory() {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            if (viewMode === "history") {
+            if (viewMode === "history" && historyMessages.length === 0) {
                 const content = await fetchChatHistory();
                 const messages = parseChatHistory(content);
                 setHistoryMessages(messages);
-            } else {
+            } else if (viewMode === "persona" && !personaContent) {
                 const content = await fetchUserPersona();
                 setPersonaContent(content);
+            } else if (viewMode === "ari-life" && !ariLifeContent) {
+                const content = await fetchAriLifeContent();
+                setAriLifeContent(content);
             }
         } finally {
             setIsLoading(false);
         }
     };
 
+    const renderFooter = () => {
+        if (viewMode === "history") {
+            const stats = DB_METADATA.history;
+            return (
+                <div className="w-full grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{stats.val1}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label1}</p>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{stats.val2}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label2}</p>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{stats.val3}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label3}</p>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-primary">{stats.val4}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label4}</p>
+                    </div>
+                </div>
+            );
+        }
+
+        const stats = DB_METADATA[viewMode];
+        return (
+            <div className="w-full flexflex-col gap-1">
+                <div className="grid grid-cols-2 gap-x-4 mb-2">
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{stats.val1}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label1}</p>
+                    </div>
+                    <div className="text-left">
+                        <p className="text-xs font-semibold text-foreground">{stats.val2}</p>
+                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">{stats.label2}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="h-screen flex flex-col bg-card/30 backdrop-blur-sm border-r border-border/50">
-            {/* Header - Squarish toggle */}
-            <div className="h-[72px] px-4 flex items-center border-b border-border/50 shrink-0">
-                <div className="flex w-full bg-transparent rounded-lg p-0.5 gap-1">
-                    <button
-                        onClick={() => setViewMode("history")}
-                        title="This is the chat database currently embedded in Ari's long term memory for demonstration purposes."
-                        className={cn(
-                            "flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
-                            viewMode === "history"
-                                ? "bg-primary/20 text-foreground border border-primary/30"
-                                : "text-muted-foreground hover:text-foreground hover:bg-card/50"
-                        )}
-                    >
-                        History
-                    </button>
-                    <button
-                        onClick={() => setViewMode("persona")}
-                        title="This is the outlined personality of the user which Ari has identified and often uses when needing more context about user."
-                        className={cn(
-                            "flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
-                            viewMode === "persona"
-                                ? "bg-primary/20 text-foreground border border-primary/30"
-                                : "text-muted-foreground hover:text-foreground hover:bg-card/50"
-                        )}
-                    >
-                        Persona
-                    </button>
-                </div>
+            {/* Header - Dropdown */}
+            <div className="px-4 pt-4 pb-2 border-b border-border/50 shrink-0">
+                <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                    <SelectTrigger className="w-full bg-background/50 border-border/50 h-auto py-2">
+                        {/* Custom Trigger Content - Clean Title Only */}
+                        <div className="flex items-center gap-2 text-foreground">
+                            {viewMode === "history" && <History className="w-4 h-4 text-muted-foreground" />}
+                            {viewMode === "persona" && <User className="w-4 h-4 text-muted-foreground" />}
+                            {viewMode === "ari-life" && <BookOpen className="w-4 h-4 text-muted-foreground" />}
+                            <span className="text-sm font-medium">
+                                {viewMode === "history" && "Chat History"}
+                                {viewMode === "persona" && "User Persona"}
+                                {viewMode === "ari-life" && "Ari's Life"}
+                            </span>
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="history">
+                            <div className="flex flex-col gap-1 py-1">
+                                <div className="flex items-center gap-2">
+                                    <History className="w-4 h-4 text-muted-foreground" />
+                                    <span className="font-medium">Chat History</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground pl-6 leading-relaxed whitespace-normal">
+                                    Chat database used for long term memory. Updated after every chat session.
+                                </span>
+                            </div>
+                        </SelectItem>
+                        <SelectItem value="persona">
+                            <div className="flex flex-col gap-1 py-1">
+                                <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-muted-foreground" />
+                                    <span className="font-medium">User Persona</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground pl-6 leading-relaxed whitespace-normal">
+                                    User's stored preferences, personality traits, and facts. Updated after every session. Fully Passed when get_user_persona tool is called.
+                                </span>
+                            </div>
+                        </SelectItem>
+                        <SelectItem value="ari-life">
+                            <div className="flex flex-col gap-1 py-1">
+                                <div className="flex items-center gap-2">
+                                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                                    <span className="font-medium">Ari's Life</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground pl-6 leading-relaxed whitespace-normal">
+                                    Information about Ari's life. Undergoes RAG pipeline when 'get_self_info' tool is called.
+                                </span>
+                            </div>
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+
+                {/* Description Text Below Dropdown */}
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-2 px-1">
+                    {VIEW_DESCRIPTIONS[viewMode]}
+                </p>
             </div>
 
             {/* Scrollable Content */}
@@ -83,33 +196,18 @@ export function ChatHistory() {
                             </div>
                         ) : viewMode === "history" ? (
                             <HistoryBubbles messages={historyMessages} />
+                        ) : viewMode === "persona" ? (
+                            <MarkdownView content={personaContent} />
                         ) : (
-                            <PersonaView content={personaContent} />
+                            <MarkdownView content={ariLifeContent} />
                         )}
                     </div>
                 </ScrollArea>
             </div>
 
-            {/* Footer - 2x2 Grid, left aligned, smaller font */}
+            {/* Footer */}
             <div className="h-[72px] px-4 flex items-center shrink-0 bg-background/30">
-                <div className="w-full grid grid-cols-2 gap-x-4 gap-y-0.5">
-                    <div className="text-left">
-                        <p className="text-xs font-semibold text-foreground">{DB_METADATA.totalSessions}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Sessions</p>
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-semibold text-foreground">{DB_METADATA.totalChats.toLocaleString()}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Messages</p>
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-semibold text-foreground">{DB_METADATA.totalTokens.toLocaleString()}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Tokens</p>
-                    </div>
-                    <div className="text-left">
-                        <p className="text-xs font-semibold text-primary">{DB_METADATA.embeddedTokens.toLocaleString()}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Embedded</p>
-                    </div>
-                </div>
+                {renderFooter()}
             </div>
         </div>
     );
@@ -148,40 +246,32 @@ function HistoryBubbles({ messages }: { messages: ChatMessage[] }) {
     );
 }
 
-function PersonaView({ content }: { content: string }) {
+function MarkdownView({ content }: { content: string }) {
     if (!content) {
         return (
             <p className="text-sm text-muted-foreground italic text-center py-8">
-                No user persona available
+                No content available
             </p>
         );
     }
 
-    const renderMarkdown = (text: string) => {
-        return text.split("\n").map((line, i) => {
-            const trimmed = line.trim();
-            if (trimmed.startsWith("# ")) {
-                return <h1 key={i} className="text-lg font-bold text-foreground mb-3 mt-4 first:mt-0">{trimmed.slice(2)}</h1>;
-            }
-            if (trimmed.startsWith("## ")) {
-                return <h2 key={i} className="text-sm font-semibold text-foreground/90 mb-2 mt-3">{trimmed.slice(3)}</h2>;
-            }
-            if (trimmed === "---") {
-                return <hr key={i} className="border-border/50 my-4" />;
-            }
-            if (trimmed.startsWith("**") && trimmed.includes("**")) {
-                const boldMatch = trimmed.match(/\*\*(.+?)\*\*/);
-                if (boldMatch) {
-                    return <p key={i} className="text-xs text-foreground/90 mb-1"><strong className="font-semibold">{boldMatch[1]}</strong>{trimmed.slice(boldMatch[0].length)}</p>;
-                }
-            }
-            if (trimmed.startsWith("- ")) {
-                return <li key={i} className="text-xs text-foreground/80 ml-4 mb-1 list-disc">{trimmed.slice(2)}</li>;
-            }
-            if (!trimmed) return <div key={i} className="h-2" />;
-            return <p key={i} className="text-xs text-foreground/80 mb-1">{trimmed}</p>;
-        });
-    };
-
-    return <div className="bg-background/50 border border-border/50 rounded-xl p-4">{renderMarkdown(content)}</div>;
+    return (
+        <div className="bg-background/50 border border-border/50 rounded-xl p-4 prose prose-invert prose-xs max-w-none">
+            <ReactMarkdown
+                components={{
+                    h1: ({ node, ...props }) => <h1 className="text-lg font-bold text-foreground mb-3 mt-4 first:mt-0" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-sm font-semibold text-foreground/90 mb-2 mt-3" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-xs font-semibold text-foreground/90 mb-1 mt-2" {...props} />,
+                    p: ({ node, ...props }) => <p className="text-xs text-foreground/80 mb-2 leading-relaxed" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                    li: ({ node, ...props }) => <li className="text-xs text-foreground/80" {...props} />,
+                    hr: ({ node, ...props }) => <hr className="border-border/50 my-4" {...props} />,
+                    blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-primary/50 pl-3 italic text-muted-foreground my-2" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-semibold text-primary/90" {...props} />,
+                }}
+            >
+                {content}
+            </ReactMarkdown>
+        </div>
+    );
 }

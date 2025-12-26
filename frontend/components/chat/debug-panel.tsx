@@ -1,6 +1,6 @@
 "use client";
 
-import { Wrench, Database, ChevronDown, Sparkles, Brain, Search } from "lucide-react";
+import { Wrench, Database, ChevronDown, Sparkles, User, Search, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
@@ -24,13 +24,18 @@ interface DebugPanelProps {
 const AVAILABLE_TOOLS = [
     {
         name: "get_user_persona",
-        icon: Brain,
+        icon: User,
         description: "Retrieves user's stored preferences, personality traits, and facts",
     },
     {
         name: "get_long_term_memory",
         icon: Search,
         description: "Semantic search through indexed conversation history using hybrid RAG",
+    },
+    {
+        name: "get_self_info",
+        icon: BookOpen,
+        description: "Retrieves information about Ari's life story, background, and personality",
     },
 ];
 

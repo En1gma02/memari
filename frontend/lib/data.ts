@@ -37,6 +37,22 @@ export async function fetchUserPersona(): Promise<string> {
     }
 }
 
+
+/**
+ * Fetch Ari's life story markdown
+ */
+export async function fetchAriLifeContent(): Promise<string> {
+    try {
+        const response = await fetch("/api/ari-life");
+        if (!response.ok) throw new Error("Failed to fetch Ari's life content");
+        const data = await response.json();
+        return data.content;
+    } catch (error) {
+        console.error("Error fetching Ari's life content:", error);
+        return "";
+    }
+}
+
 /**
  * Parse CHAT.txt content into structured messages
  */
@@ -61,3 +77,4 @@ export function parseChatHistory(content: string): ChatMessage[] {
 
     return messages;
 }
+

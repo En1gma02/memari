@@ -33,7 +33,9 @@ from config import (
     CONFIDENCE_THRESHOLD,
     TOP_K_RESULTS,
     FUSION_QUERY_COUNT,
-    CEREBRAS_DELAY_SECONDS
+    CEREBRAS_DELAY_SECONDS,
+    ARI_FAISS_INDEX_PATH,
+    ARI_METADATA_PATH
 )
 from prompts import SESSION_REWRITING_PROMPT, PERSONA_UPDATE_PROMPT
 from models import MemoryResult, MemoryChunk, PersonaUpdate
@@ -145,6 +147,12 @@ class RAGEngine:
         self.bm25 = None
         self._load_index()
         
+        # Load Ari Life index
+        self.ari_index = None
+        self.ari_metadata = None
+        self.ari_bm25 = None
+        self._load_ari_index()
+        
         print("✅ RAG Engine initialized successfully!")
     
     def _load_index(self):
@@ -175,6 +183,34 @@ class RAGEngine:
             self.bm25 = BM25(documents)
             print(f"Initialized BM25 index with {num_vectors} documents")
     
+    def _load_ari_index(self):
+        """Load Ari Life FAISS index, metadata, and initialize BM25."""
+        if not ARI_FAISS_INDEX_PATH.exists():
+            print("⚠️  Ari Life FAISS index not found. Run index_ari_life.py first.")
+            self.ari_index = faiss.IndexFlatL2(EMBEDDING_DIMENSION)
+            self.ari_metadata = {"id_to_text": {}, "id_to_original": {}}
+            self.ari_bm25 = None
+            return
+        
+        print(f"Loading Ari Life FAISS index from {ARI_FAISS_INDEX_PATH}")
+        self.ari_index = faiss.read_index(str(ARI_FAISS_INDEX_PATH))
+        
+        print(f"Loading Ari Life metadata from {ARI_METADATA_PATH}")
+        with open(ARI_METADATA_PATH, "rb") as f:
+            self.ari_metadata = pickle.load(f)
+        
+        num_vectors = self.ari_index.ntotal
+        print(f"Loaded {num_vectors} Ari Life vectors")
+        
+        # Initialize BM25 for Ari Life
+        if num_vectors > 0:
+            documents = [
+                self.ari_metadata["id_to_text"].get(i, "") 
+                for i in range(num_vectors)
+            ]
+            self.ari_bm25 = BM25(documents)
+            print(f"Initialized Ari Life BM25 index with {num_vectors} documents")
+    
     def get_user_persona(self) -> str:
         """Read and return the user persona file."""
         if not USER_PERSONA_PATH.exists():
@@ -201,17 +237,58 @@ class RAGEngine:
         Returns:
             MemoryResult with chunks, scores, and fusion usage info
         """
-        if self.index.ntotal == 0:
-            print("⚠️  FAISS index is empty")
+        # Use the generic search method
+        return self._search_index(
+            query=query,
+            index=self.index,
+            metadata=self.metadata,
+            bm25=self.bm25,
+            top_k=top_k,
+            force_fusion=force_fusion,
+            index_name="Long Term Memory"
+        )
+
+    def get_ari_life_memory(
+        self,
+        query: str,
+        top_k: int = TOP_K_RESULTS,
+        force_fusion: bool = False
+    ) -> MemoryResult:
+        """
+        Search Ari's life story with hybrid retrieval.
+        """
+        return self._search_index(
+            query=query,
+            index=self.ari_index,
+            metadata=self.ari_metadata,
+            bm25=self.ari_bm25,
+            top_k=top_k,
+            force_fusion=force_fusion,
+            index_name="Ari Life"
+        )
+    
+    def _search_index(
+        self,
+        query: str,
+        index,
+        metadata,
+        bm25,
+        top_k: int,
+        force_fusion: bool,
+        index_name: str
+    ) -> MemoryResult:
+        """Type-agnostic hybrid search implementation."""
+        if index.ntotal == 0:
+            print(f"⚠️  {index_name} FAISS index is empty")
             return MemoryResult(chunks=[], scores=[], fusion_used=False)
         
-        print(f"🔍 Hybrid search for: '{query}'")
+        print(f"🔍 Hybrid search in {index_name} for: '{query}'")
         
         # Step 1: Dense retrieval (FAISS - cosine similarity)
         query_embedding = self.embedding_model.encode([query])
         # Get more candidates for re-ranking
-        num_candidates = min(top_k * 3, self.index.ntotal)
-        distances, indices = self.index.search(query_embedding, num_candidates)
+        num_candidates = min(top_k * 3, index.ntotal)
+        distances, indices = index.search(query_embedding, num_candidates)
         
         # Convert L2 distances to similarity scores (0-1 range)
         dense_scores = {}
@@ -223,8 +300,8 @@ class RAGEngine:
         
         # Step 2: BM25 retrieval (sparse)
         bm25_scores = {}
-        if self.bm25 is not None:
-            bm25_results = self.bm25.search(query, top_k=num_candidates)
+        if bm25 is not None:
+            bm25_results = bm25.search(query, top_k=num_candidates)
             # Normalize BM25 scores to 0-1 range
             max_bm25 = max(score for _, score in bm25_results) if bm25_results else 1.0
             for idx, score in bm25_results:
@@ -254,7 +331,7 @@ class RAGEngine:
         # Step 4: Re-rank with CrossEncoder
         if sorted_candidates:
             candidate_texts = [
-                self.metadata["id_to_text"].get(idx, "") 
+                metadata["id_to_text"].get(idx, "") 
                 for idx, _ in sorted_candidates
             ]
             
@@ -284,14 +361,14 @@ class RAGEngine:
         
         if use_fusion:
             print(f"⚡ Low confidence ({top_score:.3f}) - triggering fusion retrieval")
-            return self._fusion_retrieval(query, top_k)
+            return self._fusion_retrieval(query, top_k, index, metadata, index_name)
         
         # Prepare results
         chunks = []
         scores = []
         
         for idx, score in top_results:
-            chunk_text = self.metadata["id_to_text"].get(idx, "")
+            chunk_text = metadata["id_to_text"].get(idx, "")
             chunks.append(chunk_text)
             scores.append(score)
         
@@ -299,7 +376,7 @@ class RAGEngine:
         
         return MemoryResult(chunks=chunks, scores=scores, fusion_used=False)
     
-    def _fusion_retrieval(self, query: str, top_k: int) -> MemoryResult:
+    def _fusion_retrieval(self, query: str, top_k: int, index, metadata, index_name) -> MemoryResult:
         """
         Fusion retrieval: Generate query variations and merge results.
         """
@@ -313,13 +390,13 @@ class RAGEngine:
         for variation in query_variations:
             # Get hybrid scores for this variation
             query_embedding = self.embedding_model.encode([variation])
-            num_candidates = min(top_k * 2, self.index.ntotal)
-            distances, indices = self.index.search(query_embedding, num_candidates)
+            num_candidates = min(top_k * 2, index.ntotal)
+            distances, indices = index.search(query_embedding, num_candidates)
             
             for idx, dist in zip(indices[0], distances[0]):
                 if idx != -1:
                     score = 1.0 / (1.0 + dist)
-                    chunk_text = self.metadata["id_to_text"].get(idx, "")
+                    chunk_text = metadata["id_to_text"].get(idx, "")
                     
                     if idx not in all_results or score > all_results[idx][1]:
                         all_results[idx] = (chunk_text, score)

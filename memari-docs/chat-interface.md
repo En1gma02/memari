@@ -88,7 +88,7 @@ Font sizes: `text-xs` for numbers, `text-[8px]` for labels
 ### Available Tools Section
 - Shows all tools available to the LLM
 - Each tool displayed with:
-  - Icon in colored box (Brain, Search)
+  - Icon in colored box (User, Search)
   - Tool name in mono font
   - Description text (11px)
 - Tools:
