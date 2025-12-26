@@ -26,7 +26,7 @@ export function HeroSection() {
             </div>
 
             {/* Terminal Style CTA - Solid Attention Grabber */}
-            <Link href="/chat" className="group w-fit">
+            <Link href="/chat" className="group w-fit mt-6">
                 <div className="bg-emerald-500 rounded-lg px-4 py-2.5 flex items-center justify-start gap-2 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:scale-[1.02]">
                     <div className="font-mono text-xs font-bold text-black tracking-tight flex items-center gap-2">
                         <span>&gt;_ .start-demo.sh</span>

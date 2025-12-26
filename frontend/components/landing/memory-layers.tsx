@@ -45,7 +45,7 @@ export function MemoryLayers() {
     ];
 
     return (
-        <div className="w-full bg-[#050505] border border-white/10 rounded-3xl p-5 flex flex-col relative overflow-hidden font-sans">
+        <div className="h-full w-full bg-[#050505] border border-white/10 rounded-3xl p-5 flex flex-col relative overflow-hidden font-sans">
 
             {/* Background Grid */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -62,10 +62,10 @@ export function MemoryLayers() {
             </div>
 
             {/* File System List */}
-            <div className="flex-1 flex flex-col z-10 min-h-0 relative">
+            <div className="flex-1 h-full flex flex-col justify-between z-10 min-h-0 relative">
 
                 {/* Tree Line */}
-                <div className="absolute left-[15px] top-2 bottom-4 w-px bg-white/5 -z-10" />
+                <div className="absolute left-[15px] top-2 bottom-2 w-px bg-white/5 -z-10" />
 
                 {memoryFiles.map((file, i) => (
                     <motion.div

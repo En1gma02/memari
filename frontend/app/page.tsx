@@ -29,20 +29,19 @@ const cardVariants = {
         y: 0,
         transition: {
             duration: 0.4,
-            ease: [0.23, 1, 0.32, 1] as const, // Cubic bezier for "mechanical" feel
+            ease: [0.23, 1, 0.32, 1] as const,
         },
     },
 };
 
-// Glass Card Shell - Now tighter and more uniform
+// Glass Card Shell
 const glassPanel = "bg-[#050505]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden relative shadow-2xl";
 
 export default function LandingPage() {
     return (
         <div className="h-screen w-screen overflow-hidden bg-black text-white relative font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
 
-            {/* 1. Global Atmosphere */}
-            {/* Deep Radial Gradient Spotlight */}
+            {/* Global Atmosphere */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neutral-900/40 via-black to-black pointer-events-none" />
 
             {/* Engineering Grid Overlay */}
@@ -60,54 +59,59 @@ export default function LandingPage() {
                 initial="hidden"
                 animate="visible"
             >
-                {/* BENTO GRID: Engineering HUD Layout (20% | 60% | 20%) */}
-                <div className="w-full max-w-[1600px] h-full max-h-[900px] grid grid-cols-12 md:grid-cols-[22%_56%_22%] gap-4 p-4">
+                {/* 12-COLUMN ASYMMETRIC GRID */}
+                <div className="w-full max-w-[1700px] h-full max-h-[920px] grid grid-cols-1 lg:grid-cols-12 gap-6 p-2">
 
-                    {/* LEFT COLUMN: Context & Memory */}
-                    <motion.div variants={cardVariants} className="col-span-12 md:col-auto flex flex-col gap-4 h-full">
-                        {/* Hero Section */}
-                        <div className="flex-none h-[35%] relative group">
+                    {/* LEFT COLUMN: Sidebar (Span 3 - 25%) */}
+                    <div className="col-span-1 lg:col-span-3 flex flex-col gap-4 h-full min-h-0">
+
+                        {/* 1. Hero Section */}
+                        <motion.div variants={cardVariants} className="flex-none relative group">
                             <div className="absolute inset-0 bg-emerald-500/5 blur-[100px] -z-10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                            <div className={`${glassPanel} h-full p-6 hover:border-white/20 transition-colors`}>
+                            <div className={`${glassPanel} p-6 hover:border-white/20 transition-colors h-full`}>
                                 <HeroSection />
                             </div>
-                        </div>
-                        {/* Memory Layers & Socials */}
-                        <div className="flex-1 min-h-0 flex flex-col gap-4">
-                            <MemoryLayers />
-                            <div className="mt-auto">
-                                <SocialLinks />
-                            </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
 
-                    {/* CENTER COLUMN: Pipeline Architecture */}
-                    <motion.div
-                        variants={cardVariants}
-                        className="hidden md:block col-span-12 md:col-auto h-full relative z-10"
-                    >
-                        <PipelineArchitecture />
-                    </motion.div>
-
-                    {/* RIGHT COLUMN: Metrics & Stack */}
-                    <motion.div variants={cardVariants} className="col-span-12 md:col-auto flex flex-col gap-4 h-full">
-                        {/* Benchmark Stats */}
-                        <div className="flex-none h-[45%]">
+                        {/* 2. Benchmark Stats (Moved here) */}
+                        <motion.div variants={cardVariants} className="flex-1 min-h-0">
                             <BenchmarkStats />
+                        </motion.div>
+
+                        {/* 3. Social Links */}
+                        <motion.div variants={cardVariants} className="flex-none">
+                            <SocialLinks />
+                        </motion.div>
+
+                    </div>
+
+                    {/* RIGHT COLUMN: Dashboard (Span 9 - 75%) */}
+                    <div className="col-span-1 lg:col-span-9 flex flex-col gap-4 h-full min-h-0">
+
+                        {/* Top: Pipeline Architecture (Full Width) */}
+                        <motion.div variants={cardVariants} className="flex-[1.4] min-h-0">
+                            <PipelineArchitecture />
+                        </motion.div>
+
+                        {/* Bottom: Nested Grid */}
+                        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            {/* Memory Layers (Left Slot) */}
+                            <motion.div variants={cardVariants} className="h-full min-h-0">
+                                <MemoryLayers />
+                            </motion.div>
+
+                            {/* Tool Registry (Right Slot - Moved here) */}
+                            <motion.div variants={cardVariants} className="h-full min-h-0">
+                                <ToolRegistry />
+                            </motion.div>
+
                         </div>
-                        {/* Tool Registry */}
-                        <div className="flex-1 min-h-0">
-                            <ToolRegistry />
-                        </div>
-                    </motion.div>
+
+                    </div>
 
                 </div>
             </motion.main>
-
-            {/* Mobile Override for Pipeline - Show it first on mobile */}
-            <div className="md:hidden absolute top-20 left-4 right-4 h-[300px] z-30 opacity-10 pointer-events-none">
-                {/* Visual placeholder only */}
-            </div>
 
         </div>
     );

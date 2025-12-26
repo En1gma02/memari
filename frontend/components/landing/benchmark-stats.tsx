@@ -113,7 +113,7 @@ export function BenchmarkStats() {
 
                     <div className="space-y-0.5">
                         <span className="text-[10px] text-zinc-500 block">Dataset</span>
-                        <span className="text-xs text-zinc-300">65M+ Tokens</span>
+                        <span className="text-xs text-zinc-300">Indian Law Dataset</span>
                     </div>
 
                     <div className="space-y-0.5">

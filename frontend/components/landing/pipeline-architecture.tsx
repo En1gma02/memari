@@ -20,9 +20,9 @@ export function PipelineArchitecture() {
     ];
 
     const inferenceNodes = [
-        { title: "Safety", footer: "Llama Guard 4", icon: Lock, latency: "15ms" },
-        { title: "Tool Plan", footer: "GPT-OSS 120B", icon: Cpu, latency: "800ms" },
-        { title: "Fusion", footer: "Llama 3.1 8B", icon: GitBranch, latency: "250ms" },
+        { title: "Safety", footer: "Llama Guard 4", icon: Lock, latency: "75ms" },
+        { title: "Tool Plan", footer: "GPT-OSS 120B", icon: Cpu, latency: "580ms" },
+        { title: "Fusion", footer: "Llama 3.1 8B", icon: GitBranch, latency: "320ms" },
         { title: "Rerank", footer: "MiniLM-L6-v2", icon: Search, latency: "120ms" },
         { title: "Generate", footer: "GPT-OSS 120B", icon: Zap, latency: null },
     ];

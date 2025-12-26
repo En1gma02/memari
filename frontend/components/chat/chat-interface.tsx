@@ -75,7 +75,7 @@ export function ChatInterface({
                     <div className="relative">
                         <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-border/50">
                             <Image
-                                src="/ari_profile_pic.png"
+                                src="/ari_profile.png"
                                 alt="Ari"
                                 width={48}
                                 height={48}
@@ -129,7 +129,7 @@ export function ChatInterface({
                             <div className="h-full min-h-[60vh] flex flex-col items-center justify-center text-center">
                                 <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 overflow-hidden ring-2 ring-primary/20">
                                     <Image
-                                        src="/ari_profile_pic.png"
+                                        src="/ari_profile.png"
                                         alt="Ari"
                                         width={80}
                                         height={80}

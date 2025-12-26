@@ -52,7 +52,7 @@ export function ToolRegistry() {
             </div>
 
             {/* Tool List */}
-            <div className="flex-1 flex flex-col gap-2 z-10 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="flex-1 h-full flex flex-col justify-between z-10 min-h-0">
                 {tools.map((tool, i) => (
                     <motion.div
                         key={tool.funcName}
