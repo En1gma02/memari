@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-12-26T09:49:27.786608",
+  "version": "v3",
+  "improvements": [
+    "reciprocal_rank_fusion",
+    "contextual_chunk_expansion",
+    "adaptive_top_k"
+  ],
+  "num_queries": 100,
+  "top_k": 5,
+  "retrieval_metrics": {
+    "hit_rate": 0.78,
+    "mrr": 0.316,
+    "precision": 0.156,
+    "recall": 0.78,
+    "ndcg": 0.4299
+  },
+  "qa_metrics": {
+    "bleu": 0.0017,
+    "rouge_l": 0.0055,
+    "exact_match": 0.0,
+    "f1": 0.0065
+  },
+  "latency_metrics": {
+    "avg_retrieval_ms": 2322.15,
+    "avg_generation_ms": 2413.84,
+    "avg_e2e_ms": 4736.04,
+    "throughput_qps": 0.21
+  },
+  "confidence_distribution": {
+    "high": 72,
+    "medium": 1,
+    "low": 27
+  }
+}
